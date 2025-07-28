@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerando Defesa...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; }
+        #timer { font-size: 36px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Estamos gerando sua defesa...</h2>
+    <div id="timer">60</div>
+    <p>Aguarde um instante. Isso pode levar até 1 minuto.</p>
+
+    <script>
+        let segundos = 60;
+        const timerEl = document.getElementById("timer");
+
+        const intervalo = setInterval(() => {
+            segundos--;
+            timerEl.innerText = segundos;
+            if (segundos <= 0) clearInterval(intervalo);
+        }, 1000);
+
+        // Faz requisição AJAX enquanto carrega
+        fetch("/defesa", { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    window.location.href = "/resultado";
+                } else {
+                    alert("Erro ao gerar defesa: " + data.erro);
+                }
+            });
+    </script>
+</body>
+</html>

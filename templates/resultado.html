@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Defesa Gerada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        h2 { margin-bottom: 20px; }
+        pre { white-space: pre-wrap; background: #f8f8f8; padding: 20px; border: 1px solid #ccc; }
+        button {
+            margin-top: 20px;
+            padding: 12px 20px;
+            font-size: 16px;
+            background: black;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+    <h2>Defesa Gerada</h2>
+
+    <pre id="conteudo">{{ resultado }}</pre>
+
+    <button onclick="baixarPDF()">Baixar em PDF</button>
+
+    <script>
+        function baixarPDF() {
+            const texto = document.getElementById("conteudo").innerText;
+            const blob = new Blob([texto], { type: "application/pdf" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "defesa_PAD66.pdf";
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

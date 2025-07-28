@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerar Defesa - PAD66</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 10px; margin-top: 5px; }
+        button { margin-top: 20px; padding: 12px; font-size: 16px; background: black; color: white; border: none; width: 100%; cursor: pointer; }
+        button:hover { background: #333; }
+    </style>
+</head>
+<body>
+    <h1>Gerar Defesa Administrativa</h1>
+    <form action="/gerar" method="POST">
+        <label for="nome">Nome completo:</label>
+        <input type="text" name="nome" required>
+
+        <label for="id">ID (Matrícula):</label>
+        <input type="text" name="id" required>
+
+        <label for="posto">Graduação/Posto:</label>
+        <input type="text" name="posto" required>
+
+        <label for="batalhao">Batalhão (ex: 19º BPM):</label>
+        <input type="text" name="batalhao" required>
+
+        <label for="tempo_servico">Tempo de serviço:</label>
+        <input type="text" name="tempo_servico" required>
+
+        <label for="elogios">Último elogio (opcional):</label>
+        <input type="text" name="elogios">
+
+        <label for="numero_notificacao">Nº da Notificação do PAD:</label>
+        <input type="text" name="numero_notificacao" required>
+
+        <label for="relato">Relato do ocorrido:</label>
+        <textarea name="relato" rows="6" required></textarea>
+
+        <button type="submit">GERAR MINHA DEFESA</button>
+    </form>
+</body>
+</html>
