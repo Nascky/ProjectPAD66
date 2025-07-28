@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from openai import OpenAI
 from dotenv import load_dotenv
 from utils import carregar_base_rdbm, carregar_prompt
+import subprocess
 import os
 
 load_dotenv()
@@ -18,7 +19,6 @@ def formulario():
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    # Salva os dados na sessão
     session["dados"] = {
         "nome": request.form.get("nome"),
         "id": request.form.get("id"),
@@ -84,6 +84,14 @@ def resultado():
     conteudo = session.get("defesa", "Defesa não encontrada.")
     return render_template("resultado.html", resultado=conteudo)
 
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    try:
+        print("Recebido webhook do GitHub... executando git pull")
+        subprocess.run(["git", "pull"], cwd="/home/ubuntu/ProjectPAD66")
+        return "Atualizado com sucesso", 200
+    except Exception as e:
+        return f"Erro no webhook: {str(e)}", 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
