@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enviar Documento</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px;
+      background-color: white;
+      margin-top: 40px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #0e5ec6;
+      text-align: center;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 30px;
+    }
+    input[type="file"] {
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #0e5ec6;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #09489a;
+    }
+    .anuncios {
+      margin-top: 40px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Envie a notificação recebida</h2>
+    <p>Você pode enviar uma imagem ou PDF da notificação do PADM. Nosso sistema fará a leitura automática do conteúdo.</p>
+
+    <form action="/processar-documento" method="post" enctype="multipart/form-data">
+      <input type="file" name="arquivo" accept=".jpg,.jpeg,.png,.pdf" required>
+      <button type="submit">Enviar e continuar</button>
+    </form>
+
+    <div class="anuncios">
+      <!-- Espaço para anúncios -->
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-xxxxxxxxxxxx"
+        data-ad-slot="xxxxxxxxxx"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </div>
+</body>
+</html>
