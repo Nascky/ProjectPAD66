@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Como deseja enviar o relato?</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px;
+      text-align: center;
+    }
+    h2 {
+      color: #0e5ec6;
+    }
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .button-option {
+      background-color: #0e5ec6;
+      color: white;
+      padding: 15px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .button-option:hover {
+      background-color: #09489a;
+    }
+    .anuncios {
+      margin-top: 40px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Como deseja enviar o seu relato?</h2>
+    <p>Você pode digitar manualmente ou enviar uma imagem/PDF da notificação recebida.</p>
+
+    <div class="button-group">
+      <a href="/escrever" class="button-option">Digitar meu relato</a>
+      <a href="/enviar" class="button-option">Enviar documento (foto ou PDF)</a>
+    </div>
+
+    <div class="anuncios">
+      <!-- Espaço para anúncios -->
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-xxxxxxxxxxxx"
+        data-ad-slot="xxxxxxxxxx"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </div>
+</body>
+</html>
