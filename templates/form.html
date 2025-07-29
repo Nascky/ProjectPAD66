@@ -14,7 +14,7 @@
 </head>
 <body>
     <h1>Gerar Defesa Administrativa</h1>
-    <form action="/gerar" method="POST">
+    <form action="/gerar" method="POST" enctype="multipart/form-data">
         <label for="nome">Nome completo:</label>
         <input type="text" name="nome" required>
 
@@ -38,6 +38,9 @@
 
         <label for="relato">Relato do ocorrido:</label>
         <textarea name="relato" rows="6" required></textarea>
+
+        <label for="arquivo">Anexar documento (PDF ou imagem):</label>
+        <input type="file" name="arquivo" accept=".pdf,.png,.jpg,.jpeg">
 
         <button type="submit">GERAR MINHA DEFESA</button>
     </form>
