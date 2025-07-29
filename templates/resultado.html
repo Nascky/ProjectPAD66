@@ -32,7 +32,7 @@
     <script>
         function baixarPDF() {
             const texto = document.getElementById("conteudo").innerText;
-            const blob = new Blob([texto], { type: "application/pdf" });
+            const blob = new Blob([texto], { type: "text/plain;charset=utf-8" });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
