@@ -1,48 +1,102 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerar Defesa - PAD66</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; margin-top: 5px; }
-        button { margin-top: 20px; padding: 12px; font-size: 16px; background: black; color: white; border: none; width: 100%; cursor: pointer; }
-        button:hover { background: #333; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 1rem;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        form {
+            background-color: #fff;
+            padding: 1.2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: auto;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 1rem;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.6rem;
+            margin-top: 0.3rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        input[type="file"] {
+            padding: 0.4rem 0;
+        }
+        small {
+            display: block;
+            margin-top: 0.2rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        button {
+            margin-top: 1.5rem;
+            width: 100%;
+            padding: 0.8rem;
+            background-color: #007bff;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+            form {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Gerar Defesa Administrativa</h1>
+
+    <h1>Gerar Defesa - PAD66</h1>
+
     <form action="/gerar" method="POST" enctype="multipart/form-data">
-        <label for="nome">Nome completo:</label>
-        <input type="text" name="nome" required>
+        <label for="notificacao">Número da Notificação</label>
+        <input type="number" id="notificacao" name="notificacao" required placeholder="Ex: 1090">
+        <small>Somente números, sem barras ou letras</small>
 
-        <label for="id">ID (Matrícula):</label>
-        <input type="text" name="id" required>
+        <label for="tempo_servico">Tempo de Serviço (anos)</label>
+        <input type="number" id="tempo_servico" name="tempo_servico" required placeholder="Ex: 5">
+        <small>Informe apenas o número de anos</small>
 
-        <label for="posto">Graduação/Posto:</label>
-        <input type="text" name="posto" required>
+        <label for="elogio">Último Elogio Recebido</label>
+        <input type="text" id="elogio" name="elogio" placeholder="Ex: Elogio por atuação destacada no policiamento da Expointer">
 
-        <label for="batalhao">Batalhão (ex: 19º BPM):</label>
-        <input type="text" name="batalhao" required>
+        <label for="explicacao">Breve Explicação do Ocorrido</label>
+        <textarea id="explicacao" name="explicacao" rows="4" required placeholder="Descreva brevemente o que aconteceu"></textarea>
 
-        <label for="tempo_servico">Tempo de serviço:</label>
-        <input type="text" name="tempo_servico" required>
+        <label for="arquivo">Upload da Imagem da Notificação</label>
+        <input type="file" id="arquivo" name="arquivo" accept=".jpg,.jpeg,.png,.pdf" required>
+        <small>Envie uma imagem ou PDF da notificação recebida</small>
 
-        <label for="elogios">Último elogio (opcional):</label>
-        <input type="text" name="elogios">
-
-        <label for="numero_notificacao">Nº da Notificação do PAD:</label>
-        <input type="text" name="numero_notificacao" required>
-
-        <label for="relato">Relato do ocorrido:</label>
-        <textarea name="relato" rows="6" required></textarea>
-
-        <label for="arquivo">Anexar documento (PDF ou imagem):</label>
-        <input type="file" name="arquivo" accept=".pdf,.png,.jpg,.jpeg">
-
-        <button type="submit">GERAR MINHA DEFESA</button>
+        <button type="submit">Gerar Defesa</button>
     </form>
+
 </body>
 </html>
