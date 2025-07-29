@@ -6,32 +6,39 @@ from werkzeug.utils import secure_filename
 import subprocess
 import os
 
+# Carrega variáveis de ambiente
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
+# Caminhos
 CAMINHO_RDBM = "base_juridica/RDBM.txt"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Página inicial com explicação do projeto
 @app.route("/")
 def pagina_inicial():
     return render_template("inicial.html")
 
+# Página para escolher envio de relato ou arquivo
 @app.route("/tipo-envio")
 def tipo_envio():
     return render_template("escolha.html")
 
+# Página para enviar documento
 @app.route("/enviar")
 def enviar_documento():
     return render_template("imagem.html")
 
+# Página para preencher relato manualmente
 @app.route("/escrever")
 def escrever_relato():
     return render_template("form.html")
 
+# Simulação de OCR a partir do upload do documento
 @app.route("/processar-documento", methods=["POST"])
 def processar_documento():
     arquivo = request.files.get("arquivo")
@@ -42,15 +49,15 @@ def processar_documento():
     caminho_arquivo = os.path.join(UPLOAD_FOLDER, nome_seguro)
     arquivo.save(caminho_arquivo)
 
-    # Aqui você implementaria o OCR real
+    # Aqui virá o OCR real no futuro
     texto_extraido = "Simulação do texto extraído via OCR."
-
     session["dados"] = {
         "relato": texto_extraido
     }
 
     return redirect(url_for("loading"))
 
+# Rota que recebe os dados manuais do formulário
 @app.route("/gerar", methods=["POST"])
 def gerar():
     session["dados"] = {
@@ -64,6 +71,7 @@ def gerar():
         "relato": request.form.get("relato")
     }
 
+    # Salva arquivo se existir
     arquivo = request.files.get("arquivo")
     if arquivo and arquivo.filename != "":
         nome_seguro = secure_filename(arquivo.filename)
@@ -73,10 +81,12 @@ def gerar():
 
     return redirect(url_for("loading"))
 
+# Página de carregamento com o cronômetro
 @app.route("/loading")
 def loading():
     return render_template("loading.html")
 
+# Geração da defesa com IA
 @app.route("/defesa", methods=["POST"])
 def defesa():
     dados = session.get("dados")
@@ -121,11 +131,13 @@ RELATO DOS FATOS:
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
+# Exibição da defesa gerada
 @app.route("/resultado")
 def resultado():
     conteudo = session.get("defesa", "Defesa não encontrada.")
     return render_template("resultado.html", resultado=conteudo)
 
+# Webhook para atualizar o projeto via GitHub
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
