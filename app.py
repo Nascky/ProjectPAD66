@@ -123,7 +123,7 @@ RELATO DOS FATOS:
 
     try:
         resposta = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": prompt_completo},
                 {"role": "user", "content": relato_do_militar}
