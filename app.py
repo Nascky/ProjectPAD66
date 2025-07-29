@@ -18,7 +18,26 @@ app.secret_key = "pad66-secret"
 # Caminhos
 CAMINHO_RDBM = "base_juridica/RDBM.txt"
 UPLOAD_FOLDER = "uploads"
+PROMPT_CONVERT = "prompts/convert.txt"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def carregar_prompt_convert():
+    with open(PROMPT_CONVERT, "r", encoding="utf-8") as f:
+        return f.read()
+
+def converter_para_termos_juridicos(relato):
+    prompt_base = carregar_prompt_convert()
+    prompt = prompt_base.replace("{RELATO_DO_POLICIAL}", relato)
+
+    resposta = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": prompt}
+        ],
+        temperature=0.2
+    )
+    termos = resposta.choices[0].message.content
+    return [t.strip() for t in termos.split(",") if t.strip()]
 
 # Página inicial com explicação do projeto
 @app.route("/")
@@ -57,8 +76,11 @@ def processar_documento():
     except Exception as e:
         return jsonify({"erro": f"Erro ao processar imagem: {str(e)}"}), 500
 
+    # CONVERTE o texto extraído em termos jurídicos antes de salvar na sessão
+    termos_juridicos = converter_para_termos_juridicos(texto_extraido)
     session["dados"] = {
-        "relato": texto_extraido
+        "relato": texto_extraido,
+        "termos_juridicos": termos_juridicos
     }
 
     return redirect(url_for("loading"))
@@ -66,6 +88,10 @@ def processar_documento():
 # Rota que recebe os dados manuais do formulário
 @app.route("/gerar", methods=["POST"])
 def gerar():
+    relato = request.form.get("relato")
+
+    termos_juridicos = converter_para_termos_juridicos(relato)
+
     session["dados"] = {
         "nome": request.form.get("nome"),
         "id": request.form.get("id"),
@@ -74,7 +100,8 @@ def gerar():
         "tempo_servico": request.form.get("tempo_servico"),
         "elogios": request.form.get("elogios"),
         "numero_notificacao": request.form.get("numero_notificacao"),
-        "relato": request.form.get("relato")
+        "relato": relato,
+        "termos_juridicos": termos_juridicos
     }
 
     # Salva arquivo se existir
@@ -92,7 +119,7 @@ def gerar():
 def loading():
     return render_template("loading.html")
 
-# Geração da defesa com IA
+# Geração da defesa com IA (vai receber os artigos buscados depois!)
 @app.route("/defesa", methods=["POST"])
 def defesa():
     dados = session.get("dados")
@@ -101,8 +128,12 @@ def defesa():
 
     prompt_base = carregar_prompt()
     base_rdbm = carregar_base_rdbm(CAMINHO_RDBM)
+    termos_juridicos = dados.get("termos_juridicos", [])
 
     prompt_completo = f"""{prompt_base}
+
+Termos jurídicos extraídos do relato:
+{', '.join(termos_juridicos)}
 
 REGULAMENTO DISCIPLINAR DA BRIGADA MILITAR (RDBM):
 {base_rdbm}
