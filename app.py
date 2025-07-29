@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from openai import OpenAI
 from dotenv import load_dotenv
 from utils import carregar_base_rdbm, carregar_prompt
+from werkzeug.utils import secure_filename
 import subprocess
 import os
 
@@ -12,6 +13,8 @@ app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
 CAMINHO_RDBM = "base_juridica/RDBM.txt"
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/", methods=["GET"])
 def formulario():
@@ -19,6 +22,7 @@ def formulario():
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
+    # Salvar dados do formulário
     session["dados"] = {
         "nome": request.form.get("nome"),
         "id": request.form.get("id"),
@@ -29,6 +33,15 @@ def gerar():
         "numero_notificacao": request.form.get("numero_notificacao"),
         "relato": request.form.get("relato")
     }
+
+    # Verifica se veio arquivo
+    arquivo = request.files.get("arquivo")
+    if arquivo and arquivo.filename != "":
+        nome_seguro = secure_filename(arquivo.filename)
+        caminho_arquivo = os.path.join(UPLOAD_FOLDER, nome_seguro)
+        arquivo.save(caminho_arquivo)
+        session["arquivo_path"] = caminho_arquivo  # pode usar na defesa se quiser
+
     return redirect(url_for("loading"))
 
 @app.route("/loading")
