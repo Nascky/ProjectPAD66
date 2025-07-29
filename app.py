@@ -3,6 +3,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from utils import carregar_base_rdbm, carregar_prompt
 from werkzeug.utils import secure_filename
+from PIL import Image
+import pytesseract
 import subprocess
 import os
 
@@ -38,7 +40,7 @@ def enviar_documento():
 def escrever_relato():
     return render_template("form.html")
 
-# Simulação de OCR a partir do upload do documento
+# OCR real a partir do upload do documento
 @app.route("/processar-documento", methods=["POST"])
 def processar_documento():
     arquivo = request.files.get("arquivo")
@@ -49,8 +51,12 @@ def processar_documento():
     caminho_arquivo = os.path.join(UPLOAD_FOLDER, nome_seguro)
     arquivo.save(caminho_arquivo)
 
-    # Aqui virá o OCR real no futuro
-    texto_extraido = "Simulação do texto extraído via OCR."
+    try:
+        imagem = Image.open(caminho_arquivo)
+        texto_extraido = pytesseract.image_to_string(imagem, lang='por')
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao processar imagem: {str(e)}"}), 500
+
     session["dados"] = {
         "relato": texto_extraido
     }
