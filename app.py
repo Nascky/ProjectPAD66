@@ -16,13 +16,43 @@ CAMINHO_RDBM = "base_juridica/RDBM.txt"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@app.route("/", methods=["GET"])
-def formulario():
+@app.route("/")
+def pagina_inicial():
+    return render_template("inicial.html")
+
+@app.route("/tipo-envio")
+def tipo_envio():
+    return render_template("escolha.html")
+
+@app.route("/enviar")
+def enviar_documento():
+    return render_template("imagem.html")
+
+@app.route("/escrever")
+def escrever_relato():
     return render_template("form.html")
+
+@app.route("/processar-documento", methods=["POST"])
+def processar_documento():
+    arquivo = request.files.get("arquivo")
+    if not arquivo or arquivo.filename == "":
+        return jsonify({"erro": "Nenhum arquivo enviado"}), 400
+
+    nome_seguro = secure_filename(arquivo.filename)
+    caminho_arquivo = os.path.join(UPLOAD_FOLDER, nome_seguro)
+    arquivo.save(caminho_arquivo)
+
+    # Aqui você implementaria o OCR real
+    texto_extraido = "Simulação do texto extraído via OCR."
+
+    session["dados"] = {
+        "relato": texto_extraido
+    }
+
+    return redirect(url_for("loading"))
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    # Salvar dados do formulário
     session["dados"] = {
         "nome": request.form.get("nome"),
         "id": request.form.get("id"),
@@ -34,13 +64,12 @@ def gerar():
         "relato": request.form.get("relato")
     }
 
-    # Verifica se veio arquivo
     arquivo = request.files.get("arquivo")
     if arquivo and arquivo.filename != "":
         nome_seguro = secure_filename(arquivo.filename)
         caminho_arquivo = os.path.join(UPLOAD_FOLDER, nome_seguro)
         arquivo.save(caminho_arquivo)
-        session["arquivo_path"] = caminho_arquivo  # pode usar na defesa se quiser
+        session["arquivo_path"] = caminho_arquivo
 
     return redirect(url_for("loading"))
 
@@ -64,13 +93,13 @@ REGULAMENTO DISCIPLINAR DA BRIGADA MILITAR (RDBM):
 """
 
     relato_do_militar = f"""
-NOME: {dados['nome']}
-ID: {dados['id']}
-POSTO: {dados['posto']}
-BATALHÃO: {dados['batalhao']}
-TEMPO DE SERVIÇO: {dados['tempo_servico']}
-ÚLTIMO ELOGIO: {dados['elogios']}
-Nº DA NOTIFICAÇÃO DO PAD: {dados['numero_notificacao']}
+NOME: {dados.get('nome')}
+ID: {dados.get('id')}
+POSTO: {dados.get('posto')}
+BATALHÃO: {dados.get('batalhao')}
+TEMPO DE SERVIÇO: {dados.get('tempo_servico')}
+ÚLTIMO ELOGIO: {dados.get('elogios')}
+Nº DA NOTIFICAÇÃO DO PAD: {dados.get('numero_notificacao')}
 
 RELATO DOS FATOS:
 {dados['relato']}
