@@ -7,6 +7,9 @@ import pytesseract
 import subprocess
 import os
 
+# NOVO IMPORT!
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 # Carrega variáveis de ambiente
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -14,7 +17,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
-# Caminhos
 UPLOAD_FOLDER = "uploads"
 PROMPT_CONVERT = "prompts/convert.txt"
 PROMPT_PAD66 = "prompts/prompt_pad66.txt"
@@ -42,21 +44,30 @@ def converter_para_termos_juridicos(relato):
     termos = resposta.choices[0].message.content
     return [t.strip() for t in termos.split(",") if t.strip()]
 
-def buscar_artigos_em_base_juridica(termos, pasta_base=BASE_JURIDICA_PATH, limite=10):
-    artigos_encontrados = []
+def buscar_artigos_mais_relevantes(relato, termos, pasta_base=BASE_JURIDICA_PATH, limite=2):
+    artigos = []
+    origens = []
+
     arquivos = [f for f in os.listdir(pasta_base) if f.endswith(".txt")]
     termos_baixo = [t.lower() for t in termos]
 
     for arquivo in arquivos:
-        with open(os.path.join(pasta_base, arquivo), "r", encoding="utf-8") as f:
+        caminho = os.path.join(pasta_base, arquivo)
+        with open(caminho, "r", encoding="utf-8") as f:
             texto = f.read()
             for bloco in texto.split("\n\n"):
                 bloco_baixo = bloco.lower()
                 if any(t in bloco_baixo for t in termos_baixo):
-                    artigos_encontrados.append(bloco.strip())
-                    if len(artigos_encontrados) >= limite:
-                        return artigos_encontrados
-    return artigos_encontrados
+                    artigos.append(bloco.strip())
+                    origens.append(arquivo.replace(".txt", ""))  # Ex: RDBM, POP
+    if not artigos:
+        return []
+    # Busca por relevância usando TF-IDF
+    textos = [relato] + artigos
+    tfidf = TfidfVectorizer().fit_transform(textos)
+    scores = (tfidf[0] * tfidf[1:].T).toarray()[0]
+    top_idx = scores.argsort()[-limite:][::-1]
+    return [(artigos[i], origens[i]) for i in top_idx]
 
 @app.route("/")
 def pagina_inicial():
@@ -135,18 +146,26 @@ def defesa():
         return jsonify({"erro": "Dados não encontrados na sessão"}), 400
 
     termos_juridicos = dados.get("termos_juridicos", [])
-    artigos_relevantes = buscar_artigos_em_base_juridica(termos_juridicos)
-    artigos_juntos = "\n\n".join(artigos_relevantes) if artigos_relevantes else "(Nenhum artigo encontrado)"
+    relato_do_militar = dados.get('relato', '')
 
-    # PROMPT INSTRUTIVO (sem texto fixo, só instrução, exemplos e variáveis)
+    artigos_e_origens = buscar_artigos_mais_relevantes(
+        relato_do_militar,
+        termos_juridicos,
+        pasta_base=BASE_JURIDICA_PATH,
+        limite=2
+    )
+    artigos_formatados = ""
+    for artigo, origem in artigos_e_origens:
+        artigos_formatados += f"\n---\n[Origem: {origem}]\n{artigo}\n"
+
     prompt_completo = f"""{carregar_prompt_pad66()}
 
 ---
 📚 Termos extraídos do relato:
 {', '.join(termos_juridicos)}
 
-📑 Artigos encontrados na base jurídica:
-{artigos_juntos}
+📑 Artigos mais relevantes encontrados na base jurídica:
+{artigos_formatados}
 
 DADOS DO MILITAR:
 - Graduação/Posto: {dados.get('posto')}
@@ -158,8 +177,6 @@ DADOS DO MILITAR:
 - Elogios (opcional): {dados.get('elogios')}
 """
 
-    relato_do_militar = dados.get('relato', '')
-
     try:
         resposta = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -167,7 +184,7 @@ DADOS DO MILITAR:
                 {"role": "system", "content": prompt_completo},
                 {"role": "user", "content": f"""
 Considere os termos, artigos e dados do militar acima.
-Redija uma defesa conforme instruções do prompt, utilizando linguagem técnica, estrutura formal, citações jurídicas e argumentação de advogado, mas em primeira pessoa, como se fosse o próprio militar.
+Redija uma defesa conforme instruções do prompt, utilizando linguagem técnica, estrutura formal, citações jurídicas (indicando origem de cada artigo, ex: RDBM, POP etc.) e argumentação de advogado, mas em primeira pessoa, como se fosse o próprio militar.
 Nunca copie o relato original — reescreva de forma técnica e elegante.
 RELATO DOS FATOS:
 {relato_do_militar}
