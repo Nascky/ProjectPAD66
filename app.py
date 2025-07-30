@@ -17,6 +17,7 @@ app.secret_key = "pad66-secret"
 # Caminhos
 UPLOAD_FOLDER = "uploads"
 PROMPT_CONVERT = "prompts/convert.txt"
+PROMPT_PAD66 = "prompts/prompt_pad66.txt"
 BASE_JURIDICA_PATH = "base_juridica"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -24,16 +25,15 @@ def carregar_prompt_convert():
     with open(PROMPT_CONVERT, "r", encoding="utf-8") as f:
         return f.read()
 
-def carregar_prompt():
-    with open("prompts/prompt_pad66.txt", "r", encoding="utf-8") as f:
+def carregar_prompt_pad66():
+    with open(PROMPT_PAD66, "r", encoding="utf-8") as f:
         return f.read()
 
 def converter_para_termos_juridicos(relato):
     prompt_base = carregar_prompt_convert()
     prompt = prompt_base.replace("{RELATO_DO_POLICIAL}", relato)
-
     resposta = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": prompt}
         ],
@@ -138,28 +138,27 @@ def defesa():
     artigos_relevantes = buscar_artigos_em_base_juridica(termos_juridicos)
     artigos_juntos = "\n\n".join(artigos_relevantes) if artigos_relevantes else "(Nenhum artigo encontrado)"
 
-    prompt_completo = f"""{carregar_prompt()}
+    # PROMPT INSTRUTIVO (sem texto fixo, só instrução, exemplos e variáveis)
+    prompt_completo = f"""{carregar_prompt_pad66()}
 
----\n
+---
 📚 Termos extraídos do relato:
 {', '.join(termos_juridicos)}
 
 📑 Artigos encontrados na base jurídica:
 {artigos_juntos}
+
+DADOS DO MILITAR:
+- Graduação/Posto: {dados.get('posto')}
+- Nome completo: {dados.get('nome')}
+- ID: {dados.get('id')}
+- Número da notificação: {dados.get('numero_notificacao')}
+- Batalhão: {dados.get('batalhao')}
+- Tempo de serviço (opcional): {dados.get('tempo_servico')}
+- Elogios (opcional): {dados.get('elogios')}
 """
 
-    relato_do_militar = f"""
-NOME: {dados.get('nome')}
-ID: {dados.get('id')}
-POSTO: {dados.get('posto')}
-BATALHÃO: {dados.get('batalhao')}
-TEMPO DE SERVIÇO: {dados.get('tempo_servico')}
-ÚLTIMO ELOGIO: {dados.get('elogios')}
-Nº DA NOTIFICAÇÃO DO PAD: {dados.get('numero_notificacao')}
-
-RELATO DOS FATOS:
-{dados['relato']}
-"""
+    relato_do_militar = dados.get('relato', '')
 
     try:
         resposta = client.chat.completions.create(
@@ -167,10 +166,10 @@ RELATO DOS FATOS:
             messages=[
                 {"role": "system", "content": prompt_completo},
                 {"role": "user", "content": f"""
-Com base nos termos e artigos apresentados, redija uma defesa conforme os padrões da Brigada Militar.
-
-A defesa deve ser escrita em primeira pessoa, como se fosse o próprio militar se manifestando, e seguir exatamente a estrutura, linguagem e estilo definidos anteriormente. Utilize os dados a seguir:
-
+Considere os termos, artigos e dados do militar acima.
+Redija uma defesa conforme instruções do prompt, utilizando linguagem técnica, estrutura formal, citações jurídicas e argumentação de advogado, mas em primeira pessoa, como se fosse o próprio militar.
+Nunca copie o relato original — reescreva de forma técnica e elegante.
+RELATO DOS FATOS:
 {relato_do_militar}
 """}
             ],
