@@ -7,6 +7,7 @@ Sempre que possível, fundamente os argumentos com base em artigos específicos 
 - O número do artigo (ex: Art. 32, III)
 - O conteúdo completo do artigo transcrito na defesa
 - De qual documento ele foi retirado (ex: RDBM, POP, Constituição, Lei 10.990)
+“Ao fundamentar, especifique de qual documento cada artigo foi extraído. Exemplo: ‘Conforme o artigo 32 do RDBM’, ou ‘Nos termos do POP, item tal…’”
 
 ❗ Não mencione ou use artigos que não se aplicam diretamente ao fato descrito.  
 ❗ Não use artigos apenas pelo número: é obrigatório escrever o conteúdo do artigo citado, interpretando sua aplicação ao caso.  
