@@ -42,7 +42,10 @@ def converter_para_termos_juridicos(relato):
         temperature=0.2
     )
     termos = resposta.choices[0].message.content
-    return [t.strip() for t in termos.split(",") if t.strip()]
+    termos_lista = [t.strip() for t in termos.split(",") if t.strip()]
+    # DEBUG: Exibe os termos extraídos do relato
+    print("[DEBUG] Termos extraídos do relato:", termos_lista)
+    return termos_lista
 
 def buscar_artigos_mais_relevantes(relato, termos, pasta_base=BASE_JURIDICA_PATH, limite=2):
     artigos = []
@@ -60,13 +63,23 @@ def buscar_artigos_mais_relevantes(relato, termos, pasta_base=BASE_JURIDICA_PATH
                 if any(t in bloco_baixo for t in termos_baixo):
                     artigos.append(bloco.strip())
                     origens.append(arquivo.replace(".txt", ""))  # Ex: RDBM, POP
+
     if not artigos:
+        print("[DEBUG] Nenhum artigo encontrado para os termos:", termos)
         return []
     # Busca por relevância usando TF-IDF
     textos = [relato] + artigos
     tfidf = TfidfVectorizer().fit_transform(textos)
     scores = (tfidf[0] * tfidf[1:].T).toarray()[0]
     top_idx = scores.argsort()[-limite:][::-1]
+
+    print("[DEBUG] Artigos encontrados para o relato:")
+    for i in top_idx:
+        print("-----")
+        print("Origem:", origens[i])
+        print(artigos[i])
+        print("-----")
+
     return [(artigos[i], origens[i]) for i in top_idx]
 
 @app.route("/")
