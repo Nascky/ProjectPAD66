@@ -24,6 +24,10 @@ def carregar_prompt_convert():
     with open(PROMPT_CONVERT, "r", encoding="utf-8") as f:
         return f.read()
 
+def carregar_prompt():
+    with open("prompts/prompt_pad66.txt", "r", encoding="utf-8") as f:
+        return f.read()
+
 def converter_para_termos_juridicos(relato):
     prompt_base = carregar_prompt_convert()
     prompt = prompt_base.replace("{RELATO_DO_POLICIAL}", relato)
@@ -134,11 +138,13 @@ def defesa():
     artigos_relevantes = buscar_artigos_em_base_juridica(termos_juridicos)
     artigos_juntos = "\n\n".join(artigos_relevantes) if artigos_relevantes else "(Nenhum artigo encontrado)"
 
-    prompt_completo = f"""
-Termos jurídicos convertidos do relato:
+    prompt_completo = f"""{carregar_prompt()}
+
+---\n
+📚 Termos extraídos do relato:
 {', '.join(termos_juridicos)}
 
-ARTIGOS JURÍDICOS RELEVANTES ENCONTRADOS:
+📑 Artigos encontrados na base jurídica:
 {artigos_juntos}
 """
 
@@ -157,17 +163,22 @@ RELATO DOS FATOS:
 
     try:
         resposta = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": prompt_completo},
-                {"role": "user", "content": relato_do_militar}
+                {"role": "user", "content": f"""
+Com base nos termos e artigos apresentados, redija uma defesa conforme os padrões da Brigada Militar.
+
+A defesa deve ser escrita em primeira pessoa, como se fosse o próprio militar se manifestando, e seguir exatamente a estrutura, linguagem e estilo definidos anteriormente. Utilize os dados a seguir:
+
+{relato_do_militar}
+"""}
             ],
             temperature=0.5
         )
         conteudo = resposta.choices[0].message.content
         session["defesa"] = conteudo
         return jsonify({"ok": True})
-
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
