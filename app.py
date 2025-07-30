@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from openai import OpenAI
 from dotenv import load_dotenv
-from utils import carregar_base_rdbm, carregar_prompt
 from werkzeug.utils import secure_filename
 from PIL import Image
 import pytesseract
@@ -16,9 +15,9 @@ app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
 # Caminhos
-CAMINHO_RDBM = "base_juridica/RDBM.txt"
 UPLOAD_FOLDER = "uploads"
 PROMPT_CONVERT = "prompts/convert.txt"
+BASE_JURIDICA_PATH = "base_juridica"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def carregar_prompt_convert():
@@ -39,27 +38,38 @@ def converter_para_termos_juridicos(relato):
     termos = resposta.choices[0].message.content
     return [t.strip() for t in termos.split(",") if t.strip()]
 
-# Página inicial com explicação do projeto
+def buscar_artigos_em_base_juridica(termos, pasta_base=BASE_JURIDICA_PATH, limite=10):
+    artigos_encontrados = []
+    arquivos = [f for f in os.listdir(pasta_base) if f.endswith(".txt")]
+    termos_baixo = [t.lower() for t in termos]
+
+    for arquivo in arquivos:
+        with open(os.path.join(pasta_base, arquivo), "r", encoding="utf-8") as f:
+            texto = f.read()
+            for bloco in texto.split("\n\n"):
+                bloco_baixo = bloco.lower()
+                if any(t in bloco_baixo for t in termos_baixo):
+                    artigos_encontrados.append(bloco.strip())
+                    if len(artigos_encontrados) >= limite:
+                        return artigos_encontrados
+    return artigos_encontrados
+
 @app.route("/")
 def pagina_inicial():
     return render_template("inicial.html")
 
-# Página para escolher envio de relato ou arquivo
 @app.route("/tipo-envio")
 def tipo_envio():
     return render_template("escolha.html")
 
-# Página para enviar documento
 @app.route("/enviar")
 def enviar_documento():
     return render_template("imagem.html")
 
-# Página para preencher relato manualmente
 @app.route("/escrever")
 def escrever_relato():
     return render_template("form.html")
 
-# OCR real a partir do upload do documento
 @app.route("/processar-documento", methods=["POST"])
 def processar_documento():
     arquivo = request.files.get("arquivo")
@@ -76,7 +86,6 @@ def processar_documento():
     except Exception as e:
         return jsonify({"erro": f"Erro ao processar imagem: {str(e)}"}), 500
 
-    # CONVERTE o texto extraído em termos jurídicos antes de salvar na sessão
     termos_juridicos = converter_para_termos_juridicos(texto_extraido)
     session["dados"] = {
         "relato": texto_extraido,
@@ -85,11 +94,9 @@ def processar_documento():
 
     return redirect(url_for("loading"))
 
-# Rota que recebe os dados manuais do formulário
 @app.route("/gerar", methods=["POST"])
 def gerar():
     relato = request.form.get("relato")
-
     termos_juridicos = converter_para_termos_juridicos(relato)
 
     session["dados"] = {
@@ -104,7 +111,6 @@ def gerar():
         "termos_juridicos": termos_juridicos
     }
 
-    # Salva arquivo se existir
     arquivo = request.files.get("arquivo")
     if arquivo and arquivo.filename != "":
         nome_seguro = secure_filename(arquivo.filename)
@@ -114,29 +120,26 @@ def gerar():
 
     return redirect(url_for("loading"))
 
-# Página de carregamento com o cronômetro
 @app.route("/loading")
 def loading():
     return render_template("loading.html")
 
-# Geração da defesa com IA (vai receber os artigos buscados depois!)
 @app.route("/defesa", methods=["POST"])
 def defesa():
     dados = session.get("dados")
     if not dados:
         return jsonify({"erro": "Dados não encontrados na sessão"}), 400
 
-    prompt_base = carregar_prompt()
-    base_rdbm = carregar_base_rdbm(CAMINHO_RDBM)
     termos_juridicos = dados.get("termos_juridicos", [])
+    artigos_relevantes = buscar_artigos_em_base_juridica(termos_juridicos)
+    artigos_juntos = "\n\n".join(artigos_relevantes) if artigos_relevantes else "(Nenhum artigo encontrado)"
 
-    prompt_completo = f"""{prompt_base}
-
-Termos jurídicos extraídos do relato:
+    prompt_completo = f"""
+Termos jurídicos convertidos do relato:
 {', '.join(termos_juridicos)}
 
-REGULAMENTO DISCIPLINAR DA BRIGADA MILITAR (RDBM):
-{base_rdbm}
+ARTIGOS JURÍDICOS RELEVANTES ENCONTRADOS:
+{artigos_juntos}
 """
 
     relato_do_militar = f"""
@@ -168,13 +171,11 @@ RELATO DOS FATOS:
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
-# Exibição da defesa gerada
 @app.route("/resultado")
 def resultado():
     conteudo = session.get("defesa", "Defesa não encontrada.")
     return render_template("resultado.html", resultado=conteudo)
 
-# Webhook para atualizar o projeto via GitHub
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
