@@ -165,7 +165,7 @@ def defesa():
         relato_do_militar,
         termos_juridicos,
         pasta_base=BASE_JURIDICA_PATH,
-        limite=2
+        limite=5
     )
     artigos_formatados = ""
     for artigo, origem in artigos_e_origens:
