@@ -2,44 +2,57 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Defesa Gerada</title>
+    <title>Resultado da Busca Jurídica</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-        h2 { margin-bottom: 20px; }
-        pre { white-space: pre-wrap; background: #f8f8f8; padding: 20px; border: 1px solid #ccc; }
-        button {
-            margin-top: 20px;
-            padding: 12px 20px;
-            font-size: 16px;
-            background: black;
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        h2 { color: #0e5ec6; margin-bottom: 20px; }
+        .subtitulo { margin-top: 32px; color: #333; font-size: 20px; }
+        .artigo-block { background: #f5f5f5; padding: 16px; border-radius: 8px; margin-bottom: 14px; word-break: break-word; }
+        .btn-premium {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: 40px auto 0 auto;
+            background: #0e5ec6;
             color: white;
+            padding: 18px 0;
             border: none;
+            border-radius: 6px;
+            font-size: 20px;
+            font-weight: bold;
             cursor: pointer;
+            transition: background 0.2s;
         }
-        button:hover {
-            background: #333;
+        .btn-premium:hover {
+            background: #07336d;
         }
     </style>
 </head>
 <body>
-    <h2>Defesa Gerada</h2>
+    <h2>Resultado da Busca Jurídica</h2>
+    <div class="subtitulo">Artigos Supostamente Infringidos:</div>
+    {% if artigos_infracao %}
+        {% for artigo in artigos_infracao %}
+            <div class="artigo-block">{{ artigo }}</div>
+        {% endfor %}
+    {% else %}
+        <div class="artigo-block">Nenhum artigo encontrado.</div>
+    {% endif %}
 
-    <pre id="conteudo">{{ resultado }}</pre>
+    <div class="subtitulo">Artigos com Potencial para Defesa/Atenuação:</div>
+    {% if artigos_defesa %}
+        {% for artigo in artigos_defesa %}
+            <div class="artigo-block">{{ artigo }}</div>
+        {% endfor %}
+    {% else %}
+        <div class="artigo-block">Nenhum artigo encontrado.</div>
+    {% endif %}
 
-    <button onclick="baixarPDF()">Baixar em PDF</button>
-
-    <script>
-        function baixarPDF() {
-            const texto = document.getElementById("conteudo").innerText;
-            const blob = new Blob([texto], { type: "text/plain;charset=utf-8" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "defesa_PAD66.pdf";
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-    </script>
+    <form action="/premium" method="get">
+        <button class="btn-premium" type="submit">
+            Gerar Defesa Completa (Premium)
+        </button>
+    </form>
 </body>
 </html>
