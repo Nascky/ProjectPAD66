@@ -2,118 +2,59 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Procurando Fundamentos Jurídicos...</title>
+    <title>Buscando artigos para sua defesa...</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px; }
         #timer { font-size: 36px; margin-top: 20px; color: #0e5ec6; }
-        #posicao { font-size: 22px; margin-top: 10px; font-weight: bold; }
-        .ads { margin: 40px 0; }
-
         .spinner {
-            margin: 30px auto 10px auto;
-            width: 50px;
-            height: 50px;
-            border: 6px solid #eee;
-            border-top: 6px solid #0e5ec6;
+            margin: 30px auto 20px auto;
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #0e5ec6;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 60px;
+            height: 60px;
+            animation: spin 1.2s linear infinite;
         }
         @keyframes spin {
-            100% { transform: rotate(360deg); }
+            0% { transform: rotate(0deg);}
+            100% { transform: rotate(360deg);}
         }
-        .dots {
-            display: inline-block;
-            margin-left: 5px;
-            font-size: 32px;
-            vertical-align: middle;
-        }
+        .subtexto { margin-top: 18px; font-size: 19px; color: #666; }
     </style>
 </head>
 <body>
-    <h2>Buscando fundamentos jurídicos para você...</h2>
+    <h2>Buscando artigos para sua defesa...</h2>
     <div class="spinner"></div>
-
-    <div id="frase-loading">
-        Nossa inteligência artificial roda em servidor próprio, analisando cuidadosamente o RDBM, POP e normas administrativas<span class="dots">...</span><br>
-        O atendimento é sempre individual: cada militar é atendido um de cada vez, com dedicação exclusiva.
-    </div>
-    <div id="posicao">Verificando sua posição na fila...</div>
-    <div id="timer"></div>
-    <div class="ads">
-        <!-- Espaço para anúncios (Google AdSense ou outro) -->
-        <ins class="adsbygoogle"
-            style="display:block"
-            data-ad-client="ca-pub-xxxxxxxxxxxx"
-            data-ad-slot="xxxxxxxxxx"
-            data-ad-format="auto"
-            data-full-width-responsive="true"></ins>
-        <script>
-            (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
+    <div id="timer">30</div>
+    <div class="subtexto">
+        Nossa inteligência artificial está analisando seu relato e vasculhando o regulamento disciplinar em busca dos artigos mais relevantes.<br>
+        Aguarde um instante. Você receberá, ao final, os artigos que poderiam ser usados contra você e também os que podem ajudar na sua defesa.
     </div>
 
     <script>
-        let tempoRestante = 0;
-        let timerInterval = null;
-        let defesaLiberada = false;
-        let tentativas = 0;
-        const TENTATIVA_MAXIMA = 40; // 2 minutos (3s x 40 = 120s)
-
-        // Animação das bolinhas ...
-        let dotCount = 0;
-        setInterval(() => {
-            dotCount = (dotCount + 1) % 4;
-            document.querySelector('.dots').innerText = '.'.repeat(dotCount) || '.';
-        }, 400);
-
-        function atualizaFila() {
-            fetch('/fila-posicao')
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById("posicao").innerText =
-                        `Você está na posição ${data.posicao} da fila.`;
-                    if (timerInterval === null) {
-                        tempoRestante = data.tempo_estimado;
-                        iniciaTimer();
-                    }
-                });
-        }
-
-        function iniciaTimer() {
-            timerInterval = setInterval(() => {
-                document.getElementById("timer").innerText =
-                    `Tempo estimado: ${tempoRestante}s`;
-                if (tempoRestante <= 0) {
-                    clearInterval(timerInterval);
-                    checaDefesa();
-                }
-                tempoRestante--;
-            }, 1000);
-        }
+        let tempoRestante = 30;
+        let timerInterval = setInterval(() => {
+            document.getElementById("timer").innerText = tempoRestante + "s";
+            if (tempoRestante <= 0) {
+                clearInterval(timerInterval);
+                checaDefesa();
+            }
+            tempoRestante--;
+        }, 1000);
 
         function checaDefesa() {
             fetch("/defesa", { method: "POST" })
                 .then(res => res.json())
                 .then(data => {
                     if (data.ok) {
-                        defesaLiberada = true;
                         window.location.href = "/resultado";
                     } else {
-                        tentativas++;
-                        if (tentativas > TENTATIVA_MAXIMA) {
-                            alert('Ocorreu uma demora incomum. Tente novamente mais tarde.');
-                            window.location.href = "/";
-                        } else {
-                            setTimeout(checaDefesa, 3000);
-                        }
+                        // Não achou, tenta de novo após 5s
+                        setTimeout(checaDefesa, 5000);
                     }
                 });
         }
-
-        atualizaFila();
-        setInterval(atualizaFila, 5000);
-
     </script>
 </body>
 </html>
