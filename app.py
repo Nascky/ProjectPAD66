@@ -15,7 +15,7 @@ redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 # Timer para fila
 TEMPO_MINIMO = 30
-TEMPO_POR_PESSOA = 10  # Alterado para 10s por pessoa à frente
+TEMPO_POR_PESSOA = 10  # 10s por pessoa à frente
 
 def get_posicao_na_fila(user_id):
     fila = redis_client.lrange('fila_pad66', 0, -1)
@@ -64,9 +64,8 @@ def processar_documento():
     try:
         imagem = Image.open(caminho_arquivo)
         texto_extraido = pytesseract.image_to_string(imagem, lang='por')
-        os.remove(caminho_arquivo)  # Apaga o arquivo logo após o uso
+        os.remove(caminho_arquivo)
     except Exception as e:
-        # Tenta remover o arquivo mesmo se der erro
         if os.path.exists(caminho_arquivo):
             os.remove(caminho_arquivo)
         return jsonify({"erro": f"Erro ao processar imagem: {str(e)}"}), 500
@@ -80,8 +79,9 @@ def processar_documento():
 @app.route("/gerar", methods=["POST"])
 def gerar():
     relato = request.form.get("relato")
-    user_id = session.get("user_id", os.urandom(8).hex())
+    user_id = os.urandom(8).hex()  # Gera novo sempre!
     session["user_id"] = user_id
+    print("[/gerar] user_id:", user_id)
     redis_client.rpush('fila_pad66', json.dumps({"user_id": user_id, "relato": relato}))
     return redirect(url_for("loading"))
 
@@ -92,7 +92,9 @@ def loading():
 @app.route("/defesa", methods=["POST"])
 def defesa():
     user_id = session.get("user_id")
+    print("[/defesa] user_id na sessão:", user_id)
     resultado = redis_client.get(f"resultado:{user_id}")
+    print("[/defesa] resultado retornado:", resultado)
     if resultado:
         return jsonify({"ok": True})
     else:
