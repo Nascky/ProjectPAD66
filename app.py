@@ -24,6 +24,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Redis setup
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
+# Parâmetros de fila/timer
+TEMPO_MINIMO = 30                   # Tempo mínimo na tela (segundos)
+TEMPO_MEDIO_PROCESSO = 3            # Tempo médio por defesa (segundos)
+
 def carregar_prompt_pad66():
     with open(PROMPT_PAD66, "r", encoding="utf-8") as f:
         return f.read()
@@ -41,6 +45,26 @@ def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
                     artigos.append(bloco.strip())
                     origens.append(arquivo.replace(".txt", ""))  # Ex: RDBM, POP
     return artigos, origens
+
+# NOVO: posição na fila e tempo estimado
+def get_posicao_na_fila(user_id):
+    fila = redis_client.lrange('fila_pad66', 0, -1)
+    for i, item in enumerate(fila):
+        pedido = json.loads(item.decode())
+        if pedido['user_id'] == user_id:
+            return i  # 0 = primeiro da fila
+    return -1  # Não achou (já foi processado)
+
+@app.route("/fila-posicao")
+def fila_posicao():
+    user_id = session.get("user_id")
+    posicao = get_posicao_na_fila(user_id)
+    if posicao == -1:
+        # Já saiu da fila (está sendo processado)
+        return jsonify({"posicao": 0, "tempo_estimado": TEMPO_MINIMO})
+    pessoas_na_frente = posicao
+    tempo = TEMPO_MINIMO + (pessoas_na_frente * TEMPO_MEDIO_PROCESSO)
+    return jsonify({"posicao": pessoas_na_frente + 1, "tempo_estimado": tempo})
 
 @app.route("/")
 def pagina_inicial():
