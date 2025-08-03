@@ -1,0 +1,12 @@
+[Unit]
+Description=PAD66 Worker
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ProjectPAD66
+ExecStart=/home/ubuntu/ProjectPAD66/venv/bin/python /home/ubuntu/ProjectPAD66/worker.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
