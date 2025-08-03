@@ -9,14 +9,42 @@
         #timer { font-size: 36px; margin-top: 20px; color: #0e5ec6; }
         #posicao { font-size: 22px; margin-top: 10px; font-weight: bold; }
         .ads { margin: 40px 0; }
+
+        /* Spinner animado */
+        .spinner {
+            margin: 30px auto 10px auto;
+            width: 50px;
+            height: 50px;
+            border: 6px solid #eee;
+            border-top: 6px solid #0e5ec6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Bolinhas animadas */
+        .dots {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 32px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
-    <h2>Estamos gerando sua defesa...</h2>
+    <h2>Procurando os melhores fundamentos jurídicos para sua defesa...</h2>
+    <div class="spinner"></div>
+
+    <div id="frase-loading">
+        Estamos vasculhando o RDBM, POP e a legislação administrativa<span class="dots">...</span><br>
+        Isso pode levar alguns instantes.
+    </div>
     <div id="posicao">Verificando sua posição na fila...</div>
     <div id="timer"></div>
     <p>
-        Aguarde enquanto sua defesa é gerada.<br>
+        Aguarde enquanto sua defesa é elaborada.<br>
         Você pode visualizar os anúncios abaixo enquanto espera.
     </p>
     <div class="ads">
@@ -39,18 +67,23 @@
         let tentativas = 0;
         const TENTATIVA_MAXIMA = 40; // 2 minutos (3s x 40 = 120s)
 
+        // Animação das bolinhas ...
+        let dotCount = 0;
+        setInterval(() => {
+            dotCount = (dotCount + 1) % 4;
+            document.querySelector('.dots').innerText = '.'.repeat(dotCount) || '.';
+        }, 400);
+
         function atualizaFila() {
             fetch('/fila-posicao')
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById("posicao").innerText =
                         `Você está na posição ${data.posicao} da fila.`;
-                    // Só inicializa o timer na primeira chamada!
                     if (timerInterval === null) {
                         tempoRestante = data.tempo_estimado;
                         iniciaTimer();
                     }
-                    // NÃO reseta o timer depois!
                 });
         }
 
