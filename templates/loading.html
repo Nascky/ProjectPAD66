@@ -45,6 +45,7 @@
                 .then(data => {
                     document.getElementById("posicao").innerText =
                       `Você está na posição ${data.posicao} da fila.`;
+                    // Se for a primeira vez, inicia timer com valor correto
                     if (tempoRestante === 0 || tempoRestante < data.tempo_estimado) {
                         tempoRestante = data.tempo_estimado;
                     }
@@ -84,7 +85,7 @@
         }
 
         atualizaFila();
-        setInterval(atualizaFila, 5000); // Atualiza a posição na fila a cada 5s
+        setInterval(atualizaFila, 5000); // Atualiza posição a cada 5 segundos
 
     </script>
 </body>
