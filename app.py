@@ -64,7 +64,11 @@ def processar_documento():
     try:
         imagem = Image.open(caminho_arquivo)
         texto_extraido = pytesseract.image_to_string(imagem, lang='por')
+        os.remove(caminho_arquivo)  # Apaga o arquivo logo após o uso
     except Exception as e:
+        # Tenta remover o arquivo mesmo se der erro
+        if os.path.exists(caminho_arquivo):
+            os.remove(caminho_arquivo)
         return jsonify({"erro": f"Erro ao processar imagem: {str(e)}"}), 500
 
     session["dados"] = {
