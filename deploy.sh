@@ -1,16 +1,18 @@
 #!/bin/bash
 
-echo "🚀 Iniciando deploy do PAD66..."
+cd /home/ubuntu/ProjectPAD66
 
-cd /home/ubuntu/ProjectPAD66 || exit 1
-
-echo "📥 Puxando alterações do GitHub..."
+# Atualiza o código
 git pull origin main
 
-echo "🔄 Reiniciando processos no PM2..."
-pm2 restart pad66-app
-pm2 restart pad66-worker
+# Ativa o venv
+source venv/bin/activate
 
-echo "✅ Deploy finalizado com sucesso!"
-pm2 status pad66-app
-pm2 status pad66-worker
+# Mata processos antigos
+pkill -f app.py
+pkill -f worker.py
+sleep 2
+
+# Sobe de novo com nohup
+nohup python3 app.py > flask.log 2>&1 &
+nohup python3 worker.py > worker.log 2>&1 &
