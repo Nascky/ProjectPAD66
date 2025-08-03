@@ -6,34 +6,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px; }
-        #timer { font-size: 36px; margin-top: 20px; }
+        #timer { font-size: 36px; margin-top: 20px; color: #0e5ec6; }
+        #posicao { font-size: 22px; margin-top: 10px; font-weight: bold; }
+        .ads { margin: 40px 0; }
     </style>
 </head>
 <body>
     <h2>Estamos gerando sua defesa...</h2>
-    <div id="timer">60</div>
-    <p>Aguarde um instante. Isso pode levar até 1 minuto.</p>
+    <div id="posicao">Verificando sua posição na fila...</div>
+    <div id="timer"></div>
+    <p>
+        Aguarde enquanto sua defesa é gerada.<br>
+        Você pode visualizar os anúncios abaixo enquanto espera.
+    </p>
+    <div class="ads">
+        <!-- Espaço para anúncios (Google AdSense ou outro) -->
+        <ins class="adsbygoogle"
+            style="display:block"
+            data-ad-client="ca-pub-xxxxxxxxxxxx"
+            data-ad-slot="xxxxxxxxxx"
+            data-ad-format="auto"
+            data-full-width-responsive="true"></ins>
+        <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
 
     <script>
-        let segundos = 60;
-        const timerEl = document.getElementById("timer");
+        let tempoRestante = 0;
+        let timerInterval = null;
+        let defesaLiberada = false;
 
-        const intervalo = setInterval(() => {
-            segundos--;
-            timerEl.innerText = segundos;
-            if (segundos <= 0) clearInterval(intervalo);
-        }, 1000);
+        function atualizaFila() {
+            fetch('/fila-posicao')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById("posicao").innerText =
+                      `Você está na posição ${data.posicao} da fila.`;
+                    // Só atualiza tempo se for a primeira vez ou se o novo tempo for maior (pra evitar reset acidental)
+                    if (tempoRestante === 0 || tempoRestante < data.tempo_estimado) {
+                        tempoRestante = data.tempo_estimado;
+                    }
+                    if (!timerInterval) iniciaTimer();
+                });
+        }
 
-        // Faz requisição AJAX enquanto carrega
-        fetch("/defesa", { method: "POST" })
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok) {
-                    window.location.href = "/resultado";
-                } else {
-                    alert("Erro ao gerar defesa: " + data.erro);
+        function iniciaTimer() {
+            timerInterval = setInterval(() => {
+                document.getElementById("timer").innerText =
+                    `Tempo estimado: ${tempoRestante}s`;
+                if (tempoRestante <= 0) {
+                    clearInterval(timerInterval);
+                    checaDefesa();
                 }
-            });
+                tempoRestante--;
+            }, 1000);
+        }
+
+        function checaDefesa() {
+            fetch("/defesa", { method: "POST" })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.ok) {
+                        defesaLiberada = true;
+                        window.location.href = "/resultado";
+                    } else {
+                        // Se ainda não tem defesa pronta, tenta de novo em 3 segundos
+                        setTimeout(checaDefesa, 3000);
+                    }
+                });
+        }
+
+        atualizaFila();
+        setInterval(atualizaFila, 5000); // Atualiza a posição na fila a cada 5s
+
     </script>
 </body>
 </html>
