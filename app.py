@@ -78,11 +78,21 @@ def processar_documento():
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    relato = request.form.get("relato")
-    user_id = os.urandom(8).hex()  # Gera novo sempre!
+    user_id = os.urandom(8).hex()  # Sempre novo!
     session["user_id"] = user_id
-    print("[/gerar] user_id:", user_id)
-    redis_client.rpush('fila_pad66', json.dumps({"user_id": user_id, "relato": relato}))
+    dados = {
+        "user_id": user_id,
+        "nome": request.form.get("nome"),
+        "id": request.form.get("id"),
+        "posto": request.form.get("posto"),
+        "batalhao": request.form.get("batalhao"),
+        "tempo_servico": request.form.get("tempo_servico"),
+        "elogios": request.form.get("elogios"),
+        "numero_notificacao": request.form.get("numero_notificacao"),
+        "relato": request.form.get("relato"),
+    }
+    print("[/gerar] Pedido completo:", dados)
+    redis_client.rpush('fila_pad66', json.dumps(dados))
     return redirect(url_for("loading"))
 
 @app.route("/loading")
