@@ -1,21 +1,12 @@
 import redis
 import json
+import os
 from sentence_transformers import SentenceTransformer
 import numpy as np
-from openai import OpenAI
-import os
 
-PROMPT_PAD66 = "prompts/prompt_pad66.txt"
 BASE_JURIDICA_PATH = "base_juridica"
-os.environ["OPENAI_API_KEY"] = "<TUA_CHAVE_OPENAI>"  # Ou usa dotenv se preferir
-
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 minilm_model = SentenceTransformer('all-MiniLM-L6-v2')
-
-def carregar_prompt_pad66():
-    with open(PROMPT_PAD66, "r", encoding="utf-8") as f:
-        return f.read()
 
 def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
     artigos = []
@@ -28,68 +19,50 @@ def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
             for bloco in texto.split("\n\n"):
                 if bloco.strip():
                     artigos.append(bloco.strip())
-                    origens.append(arquivo.replace(".txt", ""))
+                    origens.append(arquivo.replace(".txt", ""))  # Ex: RDBM, POP
     return artigos, origens
 
-def buscar_artigos_semantico_minilm(relato, artigos, origens, limite=3):
+def classificar_artigos(relato, artigos, origens):
+    # Gera embeddings
     emb_artigos = minilm_model.encode(artigos)
     emb_relato = minilm_model.encode([relato])
     scores = np.dot(emb_artigos, emb_relato.T).flatten()
-    top_idx = scores.argsort()[-limite:][::-1]
-    return [(artigos[i], origens[i]) for i in top_idx]
-
-def processar_defesa(user_id, dados):
-    relato_do_militar = dados.get('relato', '')
-    artigos, origens = ler_base_juridica(BASE_JURIDICA_PATH)
-    artigos_e_origens = buscar_artigos_semantico_minilm(relato_do_militar, artigos, origens, limite=3)
-
-    artigos_formatados = ""
-    for artigo, origem in artigos_e_origens:
-        artigos_formatados += f"\n---\n[Origem: {origem}]\n{artigo}\n"
-
-    prompt_completo = f"""{carregar_prompt_pad66()}
-
-📑 Artigos mais relevantes encontrados na base jurídica:
-{artigos_formatados}
-
-DADOS DO MILITAR:
-- Graduação/Posto: {dados.get('posto')}
-- Nome completo: {dados.get('nome')}
-- ID: {dados.get('id')}
-- Número da notificação: {dados.get('numero_notificacao')}
-- Batalhão: {dados.get('batalhao')}
-- Tempo de serviço (opcional): {dados.get('tempo_servico')}
-- Elogios (opcional): {dados.get('elogios')}
-"""
-
-    resposta = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": prompt_completo},
-            {"role": "user", "content": f"""
-Considere os artigos e dados do militar acima.
-Redija uma defesa conforme instruções do prompt, utilizando linguagem técnica, estrutura formal, citações jurídicas (indicando origem de cada artigo, ex: RDBM, POP etc.) e argumentação de advogado, mas em primeira pessoa, como se fosse o próprio militar.
-Nunca copie o relato original — reescreva de forma técnica e elegante.
-RELATO DOS FATOS:
-{relato_do_militar}
-"""}
-        ],
-        temperature=0.5
-    )
-    conteudo = resposta.choices[0].message.content
-    redis_client.set(f"resultado:{user_id}", conteudo)
+    # Ordena por relevância (do mais próximo ao menos)
+    indices = scores.argsort()[::-1]
+    # Heurística simples:
+    artigos_infringidos = []
+    artigos_defesa = []
+    for idx in indices:
+        artigo = artigos[idx]
+        # Separação simples: se o artigo fala de "deixar de", "proibido", "vedado", etc., assume como infringido
+        # Se falar de "direito", "garantido", "elogio", "atenuante", joga na defesa
+        artigo_lower = artigo.lower()
+        if any(palavra in artigo_lower for palavra in ["deixar de", "proibido", "vedado", "falta", "omissão", "descumprir"]):
+            artigos_infringidos.append(artigo)
+        elif any(palavra in artigo_lower for palavra in ["direito", "garantido", "elogio", "atenuante", "bom comportamento", "boa conduta"]):
+            artigos_defesa.append(artigo)
+        else:
+            # Se não tiver certeza, deixa o artigo na lista mais curta
+            if len(artigos_infringidos) <= len(artigos_defesa):
+                artigos_infringidos.append(artigo)
+            else:
+                artigos_defesa.append(artigo)
+    return artigos_infringidos, artigos_defesa
 
 def worker():
     print("Worker iniciado. Esperando relatos na fila...")
+    artigos, origens = ler_base_juridica(BASE_JURIDICA_PATH)
     while True:
         _, item = redis_client.blpop('fila_pad66')
         pedido = json.loads(item.decode())
         user_id = pedido["user_id"]
-        dados = pedido["dados"]
-        try:
-            processar_defesa(user_id, dados)
-        except Exception as e:
-            print(f"Erro ao processar defesa para {user_id}: {e}")
+        relato = pedido["relato"]
+        artigos_infringidos, artigos_defesa = classificar_artigos(relato, artigos, origens)
+        resultado = {
+            "acusadores": artigos_infringidos,
+            "defesa": artigos_defesa
+        }
+        redis_client.set(f"resultado:{user_id}", json.dumps(resultado))
 
 if __name__ == "__main__":
     worker()
