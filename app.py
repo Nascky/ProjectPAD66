@@ -8,32 +8,8 @@ app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
 UPLOAD_FOLDER = "uploads"
-BASE_JURIDICA_PATH = "base_juridica"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
-
-# Timer para fila
-TEMPO_MINIMO = 30
-TEMPO_POR_PESSOA = 10  # 10s por pessoa à frente
-
-def get_posicao_na_fila(user_id):
-    fila = redis_client.lrange('fila_pad66', 0, -1)
-    for i, item in enumerate(fila):
-        pedido = json.loads(item.decode())
-        if pedido['user_id'] == user_id:
-            return i
-    return -1
-
-@app.route("/fila-posicao")
-def fila_posicao():
-    user_id = session.get("user_id")
-    posicao = get_posicao_na_fila(user_id)
-    if posicao == -1:
-        return jsonify({"posicao": 0, "tempo_estimado": TEMPO_MINIMO})
-    pessoas_na_frente = posicao
-    tempo = TEMPO_MINIMO + (pessoas_na_frente * TEMPO_POR_PESSOA)
-    return jsonify({"posicao": pessoas_na_frente, "tempo_estimado": tempo})
 
 @app.route("/")
 def pagina_inicial():
@@ -78,7 +54,7 @@ def processar_documento():
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    user_id = os.urandom(8).hex()  # Sempre novo!
+    user_id = os.urandom(8).hex()
     session["user_id"] = user_id
     dados = {
         "user_id": user_id,
@@ -97,6 +73,7 @@ def gerar():
 
 @app.route("/loading")
 def loading():
+    # O HTML já terá timer fixo de 30s
     return render_template("loading.html")
 
 @app.route("/defesa", methods=["POST"])
