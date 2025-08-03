@@ -68,3 +68,4 @@ def worker():
 
 if __name__ == "__main__":
     worker()
+print("Worker parou? Isso não era pra acontecer!")
