@@ -7,7 +7,6 @@ import pytesseract
 import subprocess
 import os
 
-# NOVO IMPORT!
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Carrega variáveis de ambiente
@@ -18,68 +17,35 @@ app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
 UPLOAD_FOLDER = "uploads"
-PROMPT_CONVERT = "prompts/convert.txt"
 PROMPT_PAD66 = "prompts/prompt_pad66.txt"
 BASE_JURIDICA_PATH = "base_juridica"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-def carregar_prompt_convert():
-    with open(PROMPT_CONVERT, "r", encoding="utf-8") as f:
-        return f.read()
 
 def carregar_prompt_pad66():
     with open(PROMPT_PAD66, "r", encoding="utf-8") as f:
         return f.read()
 
-def converter_para_termos_juridicos(relato):
-    prompt_base = carregar_prompt_convert()
-    prompt = prompt_base.replace("{RELATO_DO_POLICIAL}", relato)
-    resposta = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": prompt}
-        ],
-        temperature=0.2
-    )
-    termos = resposta.choices[0].message.content
-    termos_lista = [t.strip() for t in termos.split(",") if t.strip()]
-    # DEBUG: Exibe os termos extraídos do relato
-    print("[DEBUG] Termos extraídos do relato:", termos_lista)
-    return termos_lista
-
-def buscar_artigos_mais_relevantes(relato, termos, pasta_base=BASE_JURIDICA_PATH, limite=2):
+def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
     artigos = []
     origens = []
-
     arquivos = [f for f in os.listdir(pasta_base) if f.endswith(".txt")]
-    termos_baixo = [t.lower() for t in termos]
-
     for arquivo in arquivos:
         caminho = os.path.join(pasta_base, arquivo)
         with open(caminho, "r", encoding="utf-8") as f:
             texto = f.read()
+            # Cada artigo separado por 2 ENTER
             for bloco in texto.split("\n\n"):
-                bloco_baixo = bloco.lower()
-                if any(t in bloco_baixo for t in termos_baixo):
+                if bloco.strip():
                     artigos.append(bloco.strip())
                     origens.append(arquivo.replace(".txt", ""))  # Ex: RDBM, POP
+    return artigos, origens
 
-    if not artigos:
-        print("[DEBUG] Nenhum artigo encontrado para os termos:", termos)
-        return []
-    # Busca por relevância usando TF-IDF
+def buscar_artigos_mais_relevantes(relato, artigos, origens, limite=3):
+    # Busca semântica por TF-IDF
     textos = [relato] + artigos
     tfidf = TfidfVectorizer().fit_transform(textos)
     scores = (tfidf[0] * tfidf[1:].T).toarray()[0]
     top_idx = scores.argsort()[-limite:][::-1]
-
-    print("[DEBUG] Artigos encontrados para o relato:")
-    for i in top_idx:
-        print("-----")
-        print("Origem:", origens[i])
-        print(artigos[i])
-        print("-----")
-
     return [(artigos[i], origens[i]) for i in top_idx]
 
 @app.route("/")
@@ -114,19 +80,14 @@ def processar_documento():
     except Exception as e:
         return jsonify({"erro": f"Erro ao processar imagem: {str(e)}"}), 500
 
-    termos_juridicos = converter_para_termos_juridicos(texto_extraido)
     session["dados"] = {
-        "relato": texto_extraido,
-        "termos_juridicos": termos_juridicos
+        "relato": texto_extraido
     }
 
     return redirect(url_for("loading"))
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    relato = request.form.get("relato")
-    termos_juridicos = converter_para_termos_juridicos(relato)
-
     session["dados"] = {
         "nome": request.form.get("nome"),
         "id": request.form.get("id"),
@@ -135,17 +96,8 @@ def gerar():
         "tempo_servico": request.form.get("tempo_servico"),
         "elogios": request.form.get("elogios"),
         "numero_notificacao": request.form.get("numero_notificacao"),
-        "relato": relato,
-        "termos_juridicos": termos_juridicos
+        "relato": request.form.get("relato"),
     }
-
-    arquivo = request.files.get("arquivo")
-    if arquivo and arquivo.filename != "":
-        nome_seguro = secure_filename(arquivo.filename)
-        caminho_arquivo = os.path.join(UPLOAD_FOLDER, nome_seguro)
-        arquivo.save(caminho_arquivo)
-        session["arquivo_path"] = caminho_arquivo
-
     return redirect(url_for("loading"))
 
 @app.route("/loading")
@@ -158,24 +110,17 @@ def defesa():
     if not dados:
         return jsonify({"erro": "Dados não encontrados na sessão"}), 400
 
-    termos_juridicos = dados.get("termos_juridicos", [])
     relato_do_militar = dados.get('relato', '')
 
-    artigos_e_origens = buscar_artigos_mais_relevantes(
-        relato_do_militar,
-        termos_juridicos,
-        pasta_base=BASE_JURIDICA_PATH,
-        limite=5
-    )
+    # Busca semântica local: pega 3 artigos mais próximos do relato
+    artigos, origens = ler_base_juridica(BASE_JURIDICA_PATH)
+    artigos_e_origens = buscar_artigos_mais_relevantes(relato_do_militar, artigos, origens, limite=3)
+
     artigos_formatados = ""
     for artigo, origem in artigos_e_origens:
         artigos_formatados += f"\n---\n[Origem: {origem}]\n{artigo}\n"
 
     prompt_completo = f"""{carregar_prompt_pad66()}
-
----
-📚 Termos extraídos do relato:
-{', '.join(termos_juridicos)}
 
 📑 Artigos mais relevantes encontrados na base jurídica:
 {artigos_formatados}
@@ -196,7 +141,7 @@ DADOS DO MILITAR:
             messages=[
                 {"role": "system", "content": prompt_completo},
                 {"role": "user", "content": f"""
-Considere os termos, artigos e dados do militar acima.
+Considere os artigos e dados do militar acima.
 Redija uma defesa conforme instruções do prompt, utilizando linguagem técnica, estrutura formal, citações jurídicas (indicando origem de cada artigo, ex: RDBM, POP etc.) e argumentação de advogado, mas em primeira pessoa, como se fosse o próprio militar.
 Nunca copie o relato original — reescreva de forma técnica e elegante.
 RELATO DOS FATOS:
