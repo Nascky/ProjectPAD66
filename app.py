@@ -6,8 +6,8 @@ from PIL import Image
 import pytesseract
 import subprocess
 import os
-
-from sklearn.feature_extraction.text import TfidfVectorizer
+import redis
+import json
 
 # Carrega variáveis de ambiente
 load_dotenv()
@@ -21,6 +21,9 @@ PROMPT_PAD66 = "prompts/prompt_pad66.txt"
 BASE_JURIDICA_PATH = "base_juridica"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Redis setup
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
 def carregar_prompt_pad66():
     with open(PROMPT_PAD66, "r", encoding="utf-8") as f:
         return f.read()
@@ -33,20 +36,11 @@ def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
         caminho = os.path.join(pasta_base, arquivo)
         with open(caminho, "r", encoding="utf-8") as f:
             texto = f.read()
-            # Cada artigo separado por 2 ENTER
             for bloco in texto.split("\n\n"):
                 if bloco.strip():
                     artigos.append(bloco.strip())
                     origens.append(arquivo.replace(".txt", ""))  # Ex: RDBM, POP
     return artigos, origens
-
-def buscar_artigos_mais_relevantes(relato, artigos, origens, limite=3):
-    # Busca semântica por TF-IDF
-    textos = [relato] + artigos
-    tfidf = TfidfVectorizer().fit_transform(textos)
-    scores = (tfidf[0] * tfidf[1:].T).toarray()[0]
-    top_idx = scores.argsort()[-limite:][::-1]
-    return [(artigos[i], origens[i]) for i in top_idx]
 
 @app.route("/")
 def pagina_inicial():
@@ -88,7 +82,7 @@ def processar_documento():
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    session["dados"] = {
+    dados = {
         "nome": request.form.get("nome"),
         "id": request.form.get("id"),
         "posto": request.form.get("posto"),
@@ -98,6 +92,10 @@ def gerar():
         "numero_notificacao": request.form.get("numero_notificacao"),
         "relato": request.form.get("relato"),
     }
+    user_id = session.get("user_id", os.urandom(8).hex())
+    session["user_id"] = user_id
+    # Coloca na fila do Redis
+    redis_client.rpush('fila_pad66', json.dumps({"user_id": user_id, "dados": dados}))
     return redirect(url_for("loading"))
 
 @app.route("/loading")
@@ -106,55 +104,15 @@ def loading():
 
 @app.route("/defesa", methods=["POST"])
 def defesa():
-    dados = session.get("dados")
-    if not dados:
-        return jsonify({"erro": "Dados não encontrados na sessão"}), 400
-
-    relato_do_militar = dados.get('relato', '')
-
-    # Busca semântica local: pega 3 artigos mais próximos do relato
-    artigos, origens = ler_base_juridica(BASE_JURIDICA_PATH)
-    artigos_e_origens = buscar_artigos_mais_relevantes(relato_do_militar, artigos, origens, limite=3)
-
-    artigos_formatados = ""
-    for artigo, origem in artigos_e_origens:
-        artigos_formatados += f"\n---\n[Origem: {origem}]\n{artigo}\n"
-
-    prompt_completo = f"""{carregar_prompt_pad66()}
-
-📑 Artigos mais relevantes encontrados na base jurídica:
-{artigos_formatados}
-
-DADOS DO MILITAR:
-- Graduação/Posto: {dados.get('posto')}
-- Nome completo: {dados.get('nome')}
-- ID: {dados.get('id')}
-- Número da notificação: {dados.get('numero_notificacao')}
-- Batalhão: {dados.get('batalhao')}
-- Tempo de serviço (opcional): {dados.get('tempo_servico')}
-- Elogios (opcional): {dados.get('elogios')}
-"""
-
-    try:
-        resposta = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": prompt_completo},
-                {"role": "user", "content": f"""
-Considere os artigos e dados do militar acima.
-Redija uma defesa conforme instruções do prompt, utilizando linguagem técnica, estrutura formal, citações jurídicas (indicando origem de cada artigo, ex: RDBM, POP etc.) e argumentação de advogado, mas em primeira pessoa, como se fosse o próprio militar.
-Nunca copie o relato original — reescreva de forma técnica e elegante.
-RELATO DOS FATOS:
-{relato_do_militar}
-"""}
-            ],
-            temperature=0.5
-        )
-        conteudo = resposta.choices[0].message.content
-        session["defesa"] = conteudo
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"erro": "Usuário não encontrado"}), 400
+    resultado = redis_client.get(f"resultado:{user_id}")
+    if resultado:
+        session["defesa"] = resultado.decode()
         return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+    else:
+        return jsonify({"ok": False})
 
 @app.route("/resultado")
 def resultado():
