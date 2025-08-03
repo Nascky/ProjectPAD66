@@ -44,12 +44,13 @@
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById("posicao").innerText =
-                      `Você está na posição ${data.posicao} da fila.`;
-                    // Se for a primeira vez, inicia timer com valor correto
-                    if (tempoRestante === 0 || tempoRestante < data.tempo_estimado) {
+                        `Você está na posição ${data.posicao} da fila.`;
+                    // Só inicializa o timer na primeira chamada!
+                    if (timerInterval === null) {
                         tempoRestante = data.tempo_estimado;
+                        iniciaTimer();
                     }
-                    if (!timerInterval) iniciaTimer();
+                    // NÃO reseta o timer depois!
                 });
         }
 
@@ -85,7 +86,7 @@
         }
 
         atualizaFila();
-        setInterval(atualizaFila, 5000); // Atualiza posição a cada 5 segundos
+        setInterval(atualizaFila, 5000); // Só atualiza a posição na tela a cada 5s
 
     </script>
 </body>
