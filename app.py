@@ -1,66 +1,35 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from openai import OpenAI
-from dotenv import load_dotenv
+import os, json, redis
 from werkzeug.utils import secure_filename
 from PIL import Image
 import pytesseract
-import subprocess
-import os
-import redis
-import json
-
-# Carrega variáveis de ambiente
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
 UPLOAD_FOLDER = "uploads"
-PROMPT_PAD66 = "prompts/prompt_pad66.txt"
 BASE_JURIDICA_PATH = "base_juridica"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Redis setup
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
-# Parâmetros de fila/timer
-TEMPO_MINIMO = 30                   # Tempo mínimo na tela (segundos)
-TEMPO_MEDIO_PROCESSO = 3            # Tempo médio por defesa (segundos)
+# Timer para fila
+TEMPO_MINIMO = 30
+TEMPO_MEDIO_PROCESSO = 3
 
-def carregar_prompt_pad66():
-    with open(PROMPT_PAD66, "r", encoding="utf-8") as f:
-        return f.read()
-
-def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
-    artigos = []
-    origens = []
-    arquivos = [f for f in os.listdir(pasta_base) if f.endswith(".txt")]
-    for arquivo in arquivos:
-        caminho = os.path.join(pasta_base, arquivo)
-        with open(caminho, "r", encoding="utf-8") as f:
-            texto = f.read()
-            for bloco in texto.split("\n\n"):
-                if bloco.strip():
-                    artigos.append(bloco.strip())
-                    origens.append(arquivo.replace(".txt", ""))  # Ex: RDBM, POP
-    return artigos, origens
-
-# NOVO: posição na fila e tempo estimado
 def get_posicao_na_fila(user_id):
     fila = redis_client.lrange('fila_pad66', 0, -1)
     for i, item in enumerate(fila):
         pedido = json.loads(item.decode())
         if pedido['user_id'] == user_id:
-            return i  # 0 = primeiro da fila
-    return -1  # Não achou (já foi processado)
+            return i
+    return -1
 
 @app.route("/fila-posicao")
 def fila_posicao():
     user_id = session.get("user_id")
     posicao = get_posicao_na_fila(user_id)
     if posicao == -1:
-        # Já saiu da fila (está sendo processado)
         return jsonify({"posicao": 0, "tempo_estimado": TEMPO_MINIMO})
     pessoas_na_frente = posicao
     tempo = TEMPO_MINIMO + (pessoas_na_frente * TEMPO_MEDIO_PROCESSO)
@@ -106,20 +75,10 @@ def processar_documento():
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    dados = {
-        "nome": request.form.get("nome"),
-        "id": request.form.get("id"),
-        "posto": request.form.get("posto"),
-        "batalhao": request.form.get("batalhao"),
-        "tempo_servico": request.form.get("tempo_servico"),
-        "elogios": request.form.get("elogios"),
-        "numero_notificacao": request.form.get("numero_notificacao"),
-        "relato": request.form.get("relato"),
-    }
+    relato = request.form.get("relato")
     user_id = session.get("user_id", os.urandom(8).hex())
     session["user_id"] = user_id
-    # Coloca na fila do Redis
-    redis_client.rpush('fila_pad66', json.dumps({"user_id": user_id, "dados": dados}))
+    redis_client.rpush('fila_pad66', json.dumps({"user_id": user_id, "relato": relato}))
     return redirect(url_for("loading"))
 
 @app.route("/loading")
@@ -129,19 +88,23 @@ def loading():
 @app.route("/defesa", methods=["POST"])
 def defesa():
     user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"erro": "Usuário não encontrado"}), 400
     resultado = redis_client.get(f"resultado:{user_id}")
     if resultado:
-        session["defesa"] = resultado.decode()
         return jsonify({"ok": True})
     else:
         return jsonify({"ok": False})
 
 @app.route("/resultado")
 def resultado():
-    conteudo = session.get("defesa", "Defesa não encontrada.")
-    return render_template("resultado.html", resultado=conteudo)
+    user_id = session.get("user_id")
+    resultado = redis_client.get(f"resultado:{user_id}")
+    artigos_infracao = []
+    artigos_defesa = []
+    if resultado:
+        res = json.loads(resultado.decode())
+        artigos_infracao = res.get("acusadores", [])
+        artigos_defesa = res.get("defesa", [])
+    return render_template("resultado.html", artigos_infracao=artigos_infracao, artigos_defesa=artigos_defesa)
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
