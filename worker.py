@@ -29,20 +29,22 @@ def classificar_artigos(relato, artigos, origens):
     scores = np.dot(emb_artigos, emb_relato.T).flatten()
     # Ordena por relevância (do mais próximo ao menos)
     indices = scores.argsort()[::-1]
-    # Heurística simples:
+    # Heurística simples para separar artigos
     artigos_infringidos = []
     artigos_defesa = []
     for idx in indices:
         artigo = artigos[idx]
-        # Separação simples: se o artigo fala de "deixar de", "proibido", "vedado", etc., assume como infringido
-        # Se falar de "direito", "garantido", "elogio", "atenuante", joga na defesa
         artigo_lower = artigo.lower()
-        if any(palavra in artigo_lower for palavra in ["deixar de", "proibido", "vedado", "falta", "omissão", "descumprir"]):
+        if any(palavra in artigo_lower for palavra in [
+            "deixar de", "proibido", "vedado", "falta", "omissão", "descumprir"
+        ]):
             artigos_infringidos.append(artigo)
-        elif any(palavra in artigo_lower for palavra in ["direito", "garantido", "elogio", "atenuante", "bom comportamento", "boa conduta"]):
+        elif any(palavra in artigo_lower for palavra in [
+            "direito", "garantido", "elogio", "atenuante", "bom comportamento", "boa conduta"
+        ]):
             artigos_defesa.append(artigo)
         else:
-            # Se não tiver certeza, deixa o artigo na lista mais curta
+            # Se não tiver certeza, alterna para equilibrar as listas
             if len(artigos_infringidos) <= len(artigos_defesa):
                 artigos_infringidos.append(artigo)
             else:
