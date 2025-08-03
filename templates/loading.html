@@ -36,6 +36,8 @@
         let tempoRestante = 0;
         let timerInterval = null;
         let defesaLiberada = false;
+        let tentativas = 0;
+        const TENTATIVA_MAXIMA = 40; // 2 minutos (3s x 40 = 120s)
 
         function atualizaFila() {
             fetch('/fila-posicao')
@@ -43,7 +45,6 @@
                 .then(data => {
                     document.getElementById("posicao").innerText =
                       `Você está na posição ${data.posicao} da fila.`;
-                    // Só atualiza tempo se for a primeira vez ou se o novo tempo for maior (pra evitar reset acidental)
                     if (tempoRestante === 0 || tempoRestante < data.tempo_estimado) {
                         tempoRestante = data.tempo_estimado;
                     }
@@ -71,8 +72,13 @@
                         defesaLiberada = true;
                         window.location.href = "/resultado";
                     } else {
-                        // Se ainda não tem defesa pronta, tenta de novo em 3 segundos
-                        setTimeout(checaDefesa, 3000);
+                        tentativas++;
+                        if (tentativas > TENTATIVA_MAXIMA) {
+                            alert('Ocorreu uma demora incomum. Tente novamente mais tarde.');
+                            window.location.href = "/";
+                        } else {
+                            setTimeout(checaDefesa, 3000);
+                        }
                     }
                 });
         }
