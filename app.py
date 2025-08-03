@@ -15,7 +15,7 @@ redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 # Timer para fila
 TEMPO_MINIMO = 30
-TEMPO_MEDIO_PROCESSO = 3
+TEMPO_POR_PESSOA = 10  # Alterado para 10s por pessoa à frente
 
 def get_posicao_na_fila(user_id):
     fila = redis_client.lrange('fila_pad66', 0, -1)
@@ -32,8 +32,8 @@ def fila_posicao():
     if posicao == -1:
         return jsonify({"posicao": 0, "tempo_estimado": TEMPO_MINIMO})
     pessoas_na_frente = posicao
-    tempo = TEMPO_MINIMO + (pessoas_na_frente * TEMPO_MEDIO_PROCESSO)
-    return jsonify({"posicao": pessoas_na_frente + 1, "tempo_estimado": tempo})
+    tempo = TEMPO_MINIMO + (pessoas_na_frente * TEMPO_POR_PESSOA)
+    return jsonify({"posicao": pessoas_na_frente, "tempo_estimado": tempo})
 
 @app.route("/")
 def pagina_inicial():
