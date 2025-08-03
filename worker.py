@@ -23,13 +23,11 @@ def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
     return artigos, origens
 
 def classificar_artigos(relato, artigos, origens):
-    # Gera embeddings
+    # Gera embeddings dos artigos e do relato
     emb_artigos = minilm_model.encode(artigos)
     emb_relato = minilm_model.encode([relato])
     scores = np.dot(emb_artigos, emb_relato.T).flatten()
-    # Ordena por relevância (do mais próximo ao menos)
     indices = scores.argsort()[::-1]
-    # Heurística simples para separar artigos
     artigos_infringidos = []
     artigos_defesa = []
     for idx in indices:
@@ -44,27 +42,36 @@ def classificar_artigos(relato, artigos, origens):
         ]):
             artigos_defesa.append(artigo)
         else:
-            # Se não tiver certeza, alterna para equilibrar as listas
             if len(artigos_infringidos) <= len(artigos_defesa):
                 artigos_infringidos.append(artigo)
             else:
                 artigos_defesa.append(artigo)
-    return artigos_infringidos, artigos_defesa
+    return artigos_infringidos[:5], artigos_defesa[:5]  # Limita para não encher demais
 
 def worker():
     print("Worker iniciado. Esperando relatos na fila...")
     artigos, origens = ler_base_juridica(BASE_JURIDICA_PATH)
     while True:
-        _, item = redis_client.blpop('fila_pad66')
-        pedido = json.loads(item.decode())
-        user_id = pedido["user_id"]
-        relato = pedido["relato"]
-        artigos_infringidos, artigos_defesa = classificar_artigos(relato, artigos, origens)
-        resultado = {
-            "acusadores": artigos_infringidos,
-            "defesa": artigos_defesa
-        }
-        redis_client.set(f"resultado:{user_id}", json.dumps(resultado))
+        try:
+            fila_result = redis_client.blpop('fila_pad66')
+            if fila_result:
+                _, item = fila_result
+                pedido = json.loads(item.decode())
+                user_id = pedido["user_id"]
+                relato = pedido["relato"]
+
+                print(f"\n[WORKER] Processando pedido de user_id {user_id}...")
+
+                artigos_infringidos, artigos_defesa = classificar_artigos(relato, artigos, origens)
+                resultado = {
+                    "acusadores": artigos_infringidos,
+                    "defesa": artigos_defesa
+                }
+                redis_client.set(f"resultado:{user_id}", json.dumps(resultado))
+
+                print(f"[WORKER] Resultado salvo para user_id {user_id}.\n")
+        except Exception as e:
+            print(f"[WORKER] Erro ao processar pedido: {e}")
 
 if __name__ == "__main__":
     worker()
