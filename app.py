@@ -109,8 +109,8 @@ def resultado():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
-        print("Recebido webhook do GitHub... executando git pull")
-        subprocess.run(["git", "pull"], cwd="/home/ubuntu/ProjectPAD66")
+        print("Recebido webhook do GitHub... executando deploy.sh")
+        subprocess.run(["/home/ubuntu/ProjectPAD66/deploy.sh"])
         return "Atualizado com sucesso", 200
     except Exception as e:
         return f"Erro no webhook: {str(e)}", 500
