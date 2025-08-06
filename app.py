@@ -7,14 +7,17 @@ import sys
 app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
-# CONFIGURE o IP do Servidor B
-SERVIDOR_B_URL = "http://172.31.46.113:5001/search"  # Troque pelo IP do seu Servidor B
+# IP público e endpoint do Server B
+SERVIDOR_B_URL = "http://18.223.160.115:5000/api/buscar-artigos"  # Atualizado
 
 @app.route("/")
 def index():
     return render_template("form.html")
 
 def buscar_artigos_servidor_b(relato):
+    """
+    Envia o relato do usuário para o servidor B e recebe os artigos relevantes.
+    """
     try:
         payload = {"relato": relato}
         resp = requests.post(SERVIDOR_B_URL, json=payload, timeout=30)
@@ -22,10 +25,10 @@ def buscar_artigos_servidor_b(relato):
             return resp.json()
         else:
             print(f"Erro ao buscar artigos no B: {resp.status_code} {resp.text}")
-            return {"artigos_infringidos": [], "artigos_defesa": []}
+            return {"artigos": []}
     except Exception as e:
         print(f"Falha ao conectar ao servidor B: {e}")
-        return {"artigos_infringidos": [], "artigos_defesa": []}
+        return {"artigos": []}
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
@@ -34,13 +37,12 @@ def gerar():
         return "Relato obrigatório", 400
 
     artigos = buscar_artigos_servidor_b(relato)
-    artigos_infringidos = artigos.get("artigos_infringidos", [])
-    artigos_defesa = artigos.get("artigos_defesa", [])
+    lista_artigos = artigos.get("artigos", [])
 
+    # Ajuste conforme seu resultado.html espera as variáveis!
     return render_template(
         "resultado.html",
-        artigos_infracao=artigos_infringidos,
-        artigos_defesa=artigos_defesa
+        resultado="\n\n".join(lista_artigos)
     )
 
 # --- WEBHOOK PARA AUTO DEPLOY VIA GITHUB + RESTART APP ---
