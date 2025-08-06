@@ -1,57 +1,47 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import os
-from sentence_transformers import SentenceTransformer
-import numpy as np
+import requests
 
 app = Flask(__name__)
 app.secret_key = "pad66-secret"
 
-BASE_JURIDICA_PATH = "base_juridica"
-minilm_model = SentenceTransformer('all-MiniLM-L6-v2')
+# Configuração: coloque o IP/porta do Servidor B aqui
+SERVIDOR_B_URL = "http://172.31.46.113:5001/search"  # troque pelo IP real do B
 
-def ler_base_juridica(pasta_base=BASE_JURIDICA_PATH):
-    artigos = []
-    arquivos = [f for f in os.listdir(pasta_base) if f.endswith(".txt")]
-    for arquivo in arquivos:
-        caminho = os.path.join(pasta_base, arquivo)
-        with open(caminho, "r", encoding="utf-8") as f:
-            texto = f.read()
-            for bloco in texto.split("\n\n"):
-                if bloco.strip():
-                    artigos.append(bloco.strip())
-    return artigos
+@app.route("/")
+def index():
+    return render_template("form.html")
 
-def classificar_artigos(relato, artigos):
-    emb_artigos = minilm_model.encode(artigos)
-    emb_relato = minilm_model.encode([relato])
-    scores = np.dot(emb_artigos, emb_relato.T).flatten()
-    indices = scores.argsort()[::-1]
-    artigos_infringidos = []
-    artigos_defesa = []
-    for idx in indices:
-        artigo = artigos[idx]
-        artigo_lower = artigo.lower()
-        if any(palavra in artigo_lower for palavra in ["deixar de", "proibido", "vedado", "falta", "omissão", "descumprir"]):
-            artigos_infringidos.append(artigo)
-        elif any(palavra in artigo_lower for palavra in ["direito", "garantido", "elogio", "atenuante", "bom comportamento", "boa conduta"]):
-            artigos_defesa.append(artigo)
+def buscar_artigos_servidor_b(relato):
+    try:
+        payload = {"relato": relato}
+        resp = requests.post(SERVIDOR_B_URL, json=payload, timeout=30)
+        if resp.status_code == 200:
+            return resp.json()
         else:
-            if len(artigos_infringidos) <= len(artigos_defesa):
-                artigos_infringidos.append(artigo)
-            else:
-                artigos_defesa.append(artigo)
-    return artigos_infringidos[:5], artigos_defesa[:5]
+            print(f"Erro ao buscar artigos no B: {resp.status_code} {resp.text}")
+            return {"artigos_infringidos": [], "artigos_defesa": []}
+    except Exception as e:
+        print(f"Falha ao conectar ao servidor B: {e}")
+        return {"artigos_infringidos": [], "artigos_defesa": []}
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
     relato = request.form.get("relato")
-    artigos = ler_base_juridica(BASE_JURIDICA_PATH)
-    acusadores, defesa = classificar_artigos(relato, artigos)
-    # Simula 30s de espera (opcional)
-    # import time; time.sleep(30)
-    return render_template("resultado.html", artigos_infracao=acusadores, artigos_defesa=defesa)
+    if not relato:
+        return "Relato obrigatório", 400
 
-# Os demais endpoints permanecem como antes...
+    # Busca no servidor B
+    artigos = buscar_artigos_servidor_b(relato)
+    artigos_infringidos = artigos.get("artigos_infringidos", [])
+    artigos_defesa = artigos.get("artigos_defesa", [])
+
+    # Exibe os artigos na tela
+    return render_template(
+        "resultado.html",
+        artigos_infracao=artigos_infringidos,
+        artigos_defesa=artigos_defesa
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
