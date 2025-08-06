@@ -2,91 +2,31 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Resultado da Busca Jurídica</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resultado da Busca</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-        h2 { color: #0e5ec6; margin-bottom: 24px; }
-        .tabs { display: flex; margin-bottom: 22px; }
-        .tab-btn {
-            flex: 1;
-            background: #e8e8e8;
-            border: none;
-            outline: none;
-            padding: 18px 0;
-            font-size: 18px;
-            font-weight: bold;
-            color: #222;
-            cursor: pointer;
-            border-radius: 6px 6px 0 0;
-            transition: background 0.2s;
-        }
-        .tab-btn.active { background: #0e5ec6; color: #fff; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .artigo-block {
-            background: #f5f5f5; padding: 16px;
-            border-radius: 8px; margin-bottom: 14px; word-break: break-word;
-        }
-        .btn-premium {
-            display: block;
-            width: 100%; max-width: 400px; margin: 40px auto 0 auto;
-            background: #0e5ec6; color: white;
-            padding: 18px 0; border: none; border-radius: 6px;
-            font-size: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s;
-        }
-        .btn-premium:hover { background: #07336d; }
+        h2 { margin-bottom: 10px; }
+        ul { margin-bottom: 30px; }
+        li { margin-bottom: 8px; }
     </style>
 </head>
 <body>
-    <h2>Resultado da Busca Jurídica</h2>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="abrirAba('infracao')">
-            Artigos Supostamente Infringidos
-        </button>
-        <button class="tab-btn" onclick="abrirAba('defesa')">
-            Artigos com Potencial de Defesa
-        </button>
-    </div>
-
-    <div id="tab-infracao" class="tab-content active">
-        {% if artigos_infracao %}
-            {% for artigo in artigos_infracao %}
-                <div class="artigo-block">{{ artigo }}</div>
-            {% endfor %}
+    <h2>Artigos que você pode ter infringido</h2>
+    <ul>
+        {% for artigo in artigos_infracao %}
+            <li>{{ artigo }}</li>
         {% else %}
-            <div class="artigo-block">Nenhum artigo encontrado.</div>
-        {% endif %}
-    </div>
-    <div id="tab-defesa" class="tab-content">
-        {% if artigos_defesa %}
-            {% for artigo in artigos_defesa %}
-                <div class="artigo-block">{{ artigo }}</div>
-            {% endfor %}
+            <li>Nenhum artigo identificável.</li>
+        {% endfor %}
+    </ul>
+    <h2>Artigos que podem ajudar sua defesa</h2>
+    <ul>
+        {% for artigo in artigos_defesa %}
+            <li>{{ artigo }}</li>
         {% else %}
-            <div class="artigo-block">Nenhum artigo encontrado.</div>
-        {% endif %}
-    </div>
-
-    <form action="/premium" method="get">
-        <button class="btn-premium" type="submit">
-            Gerar Defesa Completa (Premium)
-        </button>
-    </form>
-
-    <script>
-        function abrirAba(aba) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            if (aba === 'infracao') {
-                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-                document.getElementById('tab-infracao').classList.add('active');
-            } else {
-                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-                document.getElementById('tab-defesa').classList.add('active');
-            }
-        }
-    </script>
+            <li>Nenhum artigo aplicável.</li>
+        {% endfor %}
+    </ul>
+    <a href="/">Voltar</a>
 </body>
 </html>
