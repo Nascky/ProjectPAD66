@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request
 import requests
 import subprocess
+import os
+import sys
 
 app = Flask(__name__)
 app.secret_key = "pad66-secret"
@@ -41,20 +43,22 @@ def gerar():
         artigos_defesa=artigos_defesa
     )
 
-# --- WEBHOOK PARA AUTO DEPLOY VIA GITHUB ---
+# --- WEBHOOK PARA AUTO DEPLOY VIA GITHUB + RESTART APP ---
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    """Endpoint para receber webhook do GitHub e fazer git pull automático."""
+    """Endpoint para receber webhook do GitHub, fazer git pull e reiniciar a aplicação."""
     try:
         resultado = subprocess.check_output(
             ["git", "-C", "/home/ubuntu/ProjectPAD66", "pull"],
             stderr=subprocess.STDOUT
         )
-        return f"Atualizado com sucesso:\n{resultado.decode()}", 200
+        # Reinicia o processo do Flask
+        os.execv(sys.executable, ['python3'] + sys.argv)
+        return f"Atualizado com sucesso e app reiniciado:\n{resultado.decode()}", 200
     except subprocess.CalledProcessError as e:
         return f"Erro ao atualizar:\n{e.output.decode()}", 500
 
-# --------------------------------------------
+# ---------------------------------------------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
